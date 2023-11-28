@@ -1,6 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Exam Score Prediction</title>
     <style>
         body {
@@ -39,11 +42,18 @@
             cursor: pointer;
         }
 
-        table {
+        .table-container {
+            display: flex;
+            justify-content: space-around;
             margin: 20px auto;
             max-width: 80%;
+        }
+
+        table {
+            width: 45%;
             border-collapse: collapse;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px; /* Tilføjet mellemrum mellem tabeller */
         }
 
         th, td {
@@ -51,56 +61,166 @@
             border: 1px solid #ccc;
             color: blanchedalmond;
         }
+                /* Tilføjet margin mellem tabeller */
+                table + table {
+            margin-left: 20px;
+        }
+        .best-model {
+            background-color: #8cff66; /* Grøn farve */
+        }
     </style>
 </head>
 <body>
     <h1>Student Exam Score Prediction</h1>
-    <form method="POST">
+    <form method="POST" onsubmit="return saveFormValues()">
         <label for="gender">Gender:</label>
         <select name="gender" id="gender">
             <option value="female">Female</option>
             <option value="male">Male</option>
         </select><br>
-        <label for "education">Parental Education:</label>
+        <label for="education">Parental Education:</label>
         <select name="education" id="education">
             <option value="associate's degree">Associate's Degree</option>
             <option value="bachelor's degree">Bachelor's Degree</option>
             <option value="master's degree">Master's Degree</option>
             <option value="some college">Some College</option>
-            <!-- Add more options here -->
         </select><br>
         <label for="prep_course">Test Preparation Course:</label>
         <select name="prep_course" id="prep_course">
             <option value="completed">Completed</option>
             <option value="none">None</option>
         </select><br>
-        <label for "model">Model:</label>
+        <label for="model">Model:</label>
         <select name="model" id="model">
+            <option value="All">All</option>
             <option value="SVM">SVM</option>
             <option value="MLP">MLP</option>
-            <!-- Add more options here -->
+            <option value="RF">Random Forest</option>
         </select><br>
         <input type="submit" value="Predict Scores">
     </form>
-    {% if math_prediction is not none %}
-    <table>
-        <tr>
-            <th>Subject</th>
-            <th>Prediction</th>
-        </tr>
-        <tr>
-            <td>Math Score</td>
-            <td>{{ '%.2f'|format(math_prediction) }}</td>
-        </tr>
-        <tr>
-            <td>Reading Score</td>
-            <td>{{ '%.2f'|format(reading_prediction) }}</td>
-        </tr>
-        <tr>
-            <td>Writing Score</td>
-            <td>{{ '%.2f'|format(writing_prediction) }}</td>
-        </tr>
-    </table>
-    {% endif %}
+
+    <div class="table-container">
+        {% if svm_math_prediction is not none %}
+        <table>
+            <tr>
+                <th>Model</th>
+                <th>Subject</th>
+                <th>Prediction</th>
+                <th>MAE</th>
+            </tr>
+            <tr {% if best_models.get('math', {}).get('model') == 'SVM' %}class="best-model"{% endif %}>
+                <td>SVM</td>
+                <td>Math Score</td>
+                <td>{{ '%.2f'|format(svm_math_prediction) }}</td>
+                <td>{{ '%.2f'|format(svm_math_mae) }}</td>
+            </tr>
+            <tr {% if best_models.get('reading', {}).get('model') == 'SVM' %}class="best-model"{% endif %}>
+                <td>SVM</td>
+                <td>Reading Score</td>
+                <td>{{ '%.2f'|format(svm_reading_prediction) }}</td>
+                <td>{{ '%.2f'|format(svm_reading_mae) }}</td>
+            </tr>
+            <tr {% if best_models.get('writing', {}).get('model') == 'SVM' %}class="best-model"{% endif %}>
+                <td>SVM</td>
+                <td>Writing Score</td>
+                <td>{{ '%.2f'|format(svm_writing_prediction) }}</td>
+                <td>{{ '%.2f'|format(svm_writing_mae) }}</td>
+            </tr>
+        </table>
+        {% endif %}
+
+        {% if mlp_math_prediction is not none %}
+        <table>
+            <tr>
+                <th>Model</th>
+                <th>Subject</th>
+                <th>Prediction</th>
+                <th>MAE</th>
+                <tr {% if best_models.get('math', {}).get('model') == 'MLP' %}class="best-model"{% endif %}>
+                    <td>MLP</td>
+                    <td>Math Score</td>
+                    <td>{{ '%.2f'|format(mlp_math_prediction) }}</td>
+                    <td>{{ '%.2f'|format(mlp_math_mae) }}</td>
+                </tr>
+            <tr {% if best_models.get('reading', {}).get('model') == 'MLP' %}class="best-model"{% endif %}>
+                <td>MLP</td>
+                <td>Reading Score</td>
+                <td>{{ '%.2f'|format(mlp_reading_prediction) }}</td>
+                <td>{{ '%.2f'|format(mlp_reading_mae) }}</td>
+            </tr>
+            <tr {% if best_models.get('writing', {}).get('model') == 'MLP' %}class="best-model"{% endif %}>
+                <td>MLP</td>
+                <td>Writing Score</td>
+                <td>{{ '%.2f'|format(mlp_writing_prediction) }}</td>
+                <td>{{ '%.2f'|format(mlp_writing_mae) }}</td>
+            </tr>
+        </table>
+        {% endif %}
+
+        {% if rf_math_prediction is not none %}
+        <table>
+            <tr>
+                <th>Model</th>
+                <th>Subject</th>
+                <th>Prediction</th>
+                <th>MAE</th>
+            </tr>
+            <tr {% if best_models.get('math', {}).get('model') == 'Random Forest' %}class="best-model"{% endif %}>
+                <td>Random Forest</td>
+                <td>Reading Score</td>
+                <td>{{ '%.2f'|format(rf_math_prediction) }}</td>
+                <td>{{ '%.2f'|format(rf_math_mae) }}</td>
+            </tr>
+            <tr {% if best_models.get('reading', {}).get('model') == 'Random Forest' %}class="best-model"{% endif %}>
+                <td>Random Forest</td>
+                <td>Reading Score</td>
+                <td>{{ '%.2f'|format(rf_reading_prediction) }}</td>
+                <td>{{ '%.2f'|format(rf_reading_mae) }}</td>
+            </tr>
+            <tr {% if best_models.get('writing', {}).get('model') == 'Random Forest' %}class="best-model"{% endif %}>
+                <td>Random Forest</td>
+                <td>Writing Score</td>
+                <td>{{ '%.2f'|format(rf_writing_prediction) }}</td>
+                <td>{{ '%.2f'|format(rf_writing_mae) }}</td>
+            </tr>
+        </table>
+        {% endif %}
+    </div>
+
+
+
+
+
+    <script>
+        // Hent tidligere gemte værdier fra session storage
+        var savedValues = JSON.parse(sessionStorage.getItem('formValues')) || {
+            'gender': 'female',        // Eksempel startværdi
+            'education': "associate's degree",  // Eksempel startværdi
+            'prep_course': 'completed',        // Eksempel startværdi
+            'model': 'All'             // Eksempel startværdi
+        };
+
+        // Funktion til at gemme de valgte værdier i session storage
+        function saveFormValues() {
+            savedValues['gender'] = document.getElementById('gender').value;
+            savedValues['education'] = document.getElementById('education').value;
+            savedValues['prep_course'] = document.getElementById('prep_course').value;
+            savedValues['model'] = document.getElementById('model').value;
+            sessionStorage.setItem('formValues', JSON.stringify(savedValues));
+            return true;
+        }
+
+        // Funktion til at indstille de gemte værdier ved indlæsning af siden
+        function setFormValues() {
+            document.getElementById('gender').value = savedValues['gender'];
+            document.getElementById('education').value = savedValues['education'];
+            document.getElementById('prep_course').value = savedValues['prep_course'];
+            document.getElementById('model').value = savedValues['model'];
+        }
+
+        // Indstil formulardata ved indlæsning af siden
+        setFormValues();
+    </script>
 </body>
 </html>

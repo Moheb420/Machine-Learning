@@ -1,17 +1,43 @@
-from flask import Flask, render_template, request, session
-from sklearn.svm import SVR
-from sklearn.model_selection import train_test_split
+from flask import Flask, render_template, request, jsonify
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
 import pandas as pd
 import os
 import joblib
 from flask_wtf import FlaskForm
 from wtforms import SelectField
+import json
 
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"  # Change this to a secret key
 
+
+def find_best_models(mae_dict):
+    best_models = {}
+    for key, value in mae_dict.items():
+        subject, model = key.rsplit("_", 1)
+        if subject not in best_models or value < best_models[subject]["mae"]:
+            best_models[subject] = {"model": model, "mae": value}
+
+    return best_models
+
+
+# Åbn JSON-filen
+with open("../mae_values.json", "r") as f:
+    mae_values = json.load(f)
+
+# Find den bedste model for hvert fag
+best_models = find_best_models(mae_values)
+
+# Udskriv resultaterne
+for subject, info in best_models.items():
+    print(subject, info)
+
+
+rf_math = joblib.load("../rf_math_model.pkl")
+rf_reading = joblib.load("../rf_reading_model.pkl")
+rf_writing = joblib.load("../rf_writing_model.pkl")
 svm_math = joblib.load("../svm_math_model.pkl")
 svm_reading = joblib.load("../svm_reading_model.pkl")
 svm_writing = joblib.load("../svm_writing_model.pkl")
@@ -29,76 +55,21 @@ X = pd.get_dummies(
     X, columns=["gender", "parental level of education", "test preparation course"]
 )
 
-""" # Load dataset
-datapath = os.path.join("../../Journal-04", "", "")
-dataset = pd.read_csv(datapath + "StudentsPerformance.csv")
-
-# Preprocess the dataset
-X = dataset[['gender', 'parental level of education', 'test preparation course']]
-y_math = dataset['math score']
-y_reading = dataset['reading score']
-y_writing = dataset['writing score']
-
-X = pd.get_dummies(X, columns=['gender', 'parental level of education', 'test preparation course'])
-
-# Train the SVR models
-X_train_math, X_test_math, y_math_train, y_math_test = train_test_split(X, y_math, test_size=0.2, random_state=42)
-svm_math = SVR(kernel='linear')
-svm_math.fit(X_train_math, y_math_train)
-
-X_train_reading, X_test_reading, y_reading_train, y_reading_test = train_test_split(X, y_reading, test_size=0.2, random_state=42)
-svm_reading = SVR(kernel='linear')
-svm_reading.fit(X_train_reading, y_reading_train)
-
-X_train_writing, X_test_writing, y_writing_train, y_writing_test = train_test_split(X, y_writing, test_size=0.2, random_state=42)
-svm_writing = SVR(kernel='linear')
-svm_writing.fit(X_train_writing, y_writing_train) """
-
-
-""" @app.route("/", methods=["GET", "POST"])
-def home():
-    math_prediction = None
-    reading_prediction = None
-    writing_prediction = None
-
-    if request.method == "POST":
-        # Get user input data from the form
-        gender = request.form.get("gender")
-        education = request.form.get("education")
-        prep_course = request.form.get("prep_course")
-        model = request.form.get("model")
-
-        # Convert user input into a DataFrame
-        user_data = {
-            "gender_female": [1 if gender == "female" else 0],
-            "gender_male": [1 if gender == "male" else 0],
-            f"parental level of education_{education}": [1],
-            "test preparation course_completed": [
-                1 if prep_course == "completed" else 0
-            ],
-            f"model{model}": [1],
-        }
-        user_df = pd.DataFrame(user_data)
-        user_df = user_df.reindex(columns=X.columns, fill_value=0)
-
-        # Perform predictions for math, reading, and writing scores
-        math_prediction = svm_math.predict(user_df)
-        reading_prediction = svm_reading.predict(user_df)
-        writing_prediction = svm_writing.predict(user_df)
-
-    return render_template(
-        "index.html",
-        math_prediction=math_prediction,
-        reading_prediction=reading_prediction,
-        writing_prediction=writing_prediction,
-    ) """
-
 
 @app.route("/", methods=["GET", "POST"])
 def home():
     math_prediction = None
     reading_prediction = None
     writing_prediction = None
+    svm_math_prediction = None
+    svm_reading_prediction = None
+    svm_writing_prediction = None
+    mlp_math_prediction = None
+    mlp_reading_prediction = None
+    mlp_writing_prediction = None
+    rf_math_prediction = None
+    rf_reading_prediction = None
+    rf_writing_prediction = None
 
     if request.method == "POST":
         # Get user input data from the form
@@ -120,20 +91,49 @@ def home():
         user_df = user_df.reindex(columns=X.columns, fill_value=0)
 
         # Perform predictions based on the selected model
-        if model == "SVM":
-            math_prediction = svm_math.predict(user_df)
-            reading_prediction = svm_reading.predict(user_df)
-            writing_prediction = svm_writing.predict(user_df)
-        elif model == "MLP":
-            math_prediction = mlp_math.predict(user_df)
-            reading_prediction = mlp_reading.predict(user_df)
-            writing_prediction = mlp_writing.predict(user_df)
+        if model == "SVM" or model == "All":
+            svm_math_prediction = svm_math.predict(user_df)
+            svm_reading_prediction = svm_reading.predict(user_df)
+            svm_writing_prediction = svm_writing.predict(user_df)
+        else:
+            svm_math_prediction = svm_reading_prediction = svm_writing_prediction = None
+
+        if model == "MLP" or model == "All":
+            mlp_math_prediction = mlp_math.predict(user_df)
+            mlp_reading_prediction = mlp_reading.predict(user_df)
+            mlp_writing_prediction = mlp_writing.predict(user_df)
+        else:
+            mlp_math_prediction = mlp_reading_prediction = mlp_writing_prediction = None
+
+        if model == "RF" or model == "All":
+            rf_math_prediction = rf_math.predict(user_df)
+            rf_reading_prediction = rf_reading.predict(user_df)
+            rf_writing_prediction = rf_writing.predict(user_df)
+        else:
+            rf_math_prediction = rf_reading_prediction = rf_writing_prediction = None
 
     return render_template(
         "index.html",
-        math_prediction=math_prediction,
-        reading_prediction=reading_prediction,
-        writing_prediction=writing_prediction,
+        svm_math_prediction=svm_math_prediction,
+        svm_reading_prediction=svm_reading_prediction,
+        svm_writing_prediction=svm_writing_prediction,
+        mlp_math_prediction=mlp_math_prediction,
+        mlp_reading_prediction=mlp_reading_prediction,
+        mlp_writing_prediction=mlp_writing_prediction,
+        rf_math_prediction=rf_math_prediction,
+        rf_reading_prediction=rf_reading_prediction,
+        rf_writing_prediction=rf_writing_prediction,
+        # Overfør MAE-værdier til skabelonen
+        svm_math_mae=mae_values.get("mae_math_SVM"),
+        svm_reading_mae=mae_values.get("mae_reading_SVM"),
+        svm_writing_mae=mae_values.get("mae_writing_SVM"),
+        mlp_math_mae=mae_values.get("mae_math_mlp"),
+        mlp_reading_mae=mae_values.get("mae_reading_mlp"),
+        mlp_writing_mae=mae_values.get("mae_writing_mlp"),
+        rf_math_mae=mae_values.get("mae_math_rf"),
+        rf_reading_mae=mae_values.get("mae_reading_rf"),
+        rf_writing_mae=mae_values.get("mae_writing_rf"),
+        best_models=best_models,
     )
 
 

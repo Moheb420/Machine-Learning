@@ -1,0 +1,1 @@
+{"mae_math_SVM": 12.027899739599361, "mae_reading_SVM": 11.440642492738426, "mae_writing_SVM": 10.833399473461727, "mae_math_mlp": 12.021611418320852, "mae_reading_mlp": 11.334371407916969, "mae_writing_mlp": 10.755248443955876, "mae_math_rf": 12.103460790634353, "mae_reading_rf": 11.43691683569885, "mae_writing_rf": 10.826238137818613}
